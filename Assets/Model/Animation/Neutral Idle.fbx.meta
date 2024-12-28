@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ac8ce8f062be05a4f97d5b356f6401f8
+guid: e0b17f63adf9582438f34668f4414224
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -31,11 +31,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Walk
+      name: Idle
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 31
+      lastFrame: 263
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -43,7 +43,7 @@ ModelImporter:
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
-      loopBlend: 0
+      loopBlend: 1
       loopBlendOrientation: 0
       loopBlendPositionY: 0
       loopBlendPositionXZ: 0
