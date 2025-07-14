@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 951160da4bdb791458b47e0676d2f9c4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Walk_Forward_Right_IPC.anim
+  uploadId: 619933

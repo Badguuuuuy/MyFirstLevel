@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 15e611024abb4d34c865d37cd185f78a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Unequip.anim
+  uploadId: 619933

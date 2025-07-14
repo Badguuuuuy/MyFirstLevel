@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9304bc659f0f6264f95ca9d8db27232c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Sprint_Start_no_weapon_Rootmotion.anim
+  uploadId: 619933

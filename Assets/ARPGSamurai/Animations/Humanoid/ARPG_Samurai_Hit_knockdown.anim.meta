@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1925cbac85981e54db2a24b52750f4e8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Hit_knockdown.anim
+  uploadId: 619933

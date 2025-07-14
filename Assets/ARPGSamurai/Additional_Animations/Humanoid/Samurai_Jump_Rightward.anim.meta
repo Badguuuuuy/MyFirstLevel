@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6eb587d27961cb04885b86d10620312d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Additional_Animations/Humanoid/Samurai_Jump_Rightward.anim
+  uploadId: 619933

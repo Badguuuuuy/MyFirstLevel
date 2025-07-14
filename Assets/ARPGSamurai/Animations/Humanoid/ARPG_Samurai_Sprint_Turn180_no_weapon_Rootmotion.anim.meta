@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1745b5d28a26a8e478ec8f29b3bad971
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Sprint_Turn180_no_weapon_Rootmotion.anim
+  uploadId: 619933

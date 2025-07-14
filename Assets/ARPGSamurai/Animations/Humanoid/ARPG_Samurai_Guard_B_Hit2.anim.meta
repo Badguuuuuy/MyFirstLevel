@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c7203262772cbe94895ce4810b0bc88d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Animations/Humanoid/ARPG_Samurai_Guard_B_Hit2.anim
+  uploadId: 619933

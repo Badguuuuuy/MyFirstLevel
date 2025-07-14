@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8e9746fccf3f44741b39faaa53f650f4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 213957
+  packageName: ARPG Samurai
+  packageVersion: 1.0
+  assetPath: Assets/ARPGSamurai/Additional_Animations/Humanoid/Samurai_Execute_B.anim
+  uploadId: 619933
