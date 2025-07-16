@@ -14,6 +14,8 @@ namespace BgTools.CastVisualizer
             Color oldColor = Gizmos.color;
             Gizmos.color = CastVisualizerManager.Instance.HitMarkerColor;
 
+            if (normal == Vector3.zero)
+                return;
             Quaternion rotation = Quaternion.LookRotation(normal);
 
             Gizmos.DrawLine(

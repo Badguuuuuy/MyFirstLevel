@@ -234,7 +234,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6976147839631045766
 Transform:
   m_ObjectHideFlags: 0
@@ -326,7 +326,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4698853333361487488
 Transform:
   m_ObjectHideFlags: 0
@@ -336,7 +336,7 @@ Transform:
   m_GameObject: {fileID: 2430887987871904807}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalPosition: {x: 0, y: 1.55, z: 0}
   m_LocalScale: {x: 1, y: 3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -424,7 +424,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2887171283992491373}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2534013, y: -1.3756696e-15, z: 3.6035812e-16, w: 0.9673613}
+  m_LocalRotation: {x: 0.2534013, y: 0.0000103628945, z: -0.000002714571, w: 0.9673613}
   m_LocalPosition: {x: 0, y: 27.950003, z: -33.333336}
   m_LocalScale: {x: 8.333334, y: 8.333334, z: 8.333334}
   m_ConstrainProportionsScale: 0
@@ -1253,6 +1253,8 @@ GameObject:
   - component: {fileID: 4866123064457890973}
   - component: {fileID: 1728584227544999611}
   - component: {fileID: 3700684159377516464}
+  - component: {fileID: 5173561185717109091}
+  - component: {fileID: 3191466555815483674}
   m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
@@ -1298,7 +1300,7 @@ CharacterController:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Height: 18.5
   m_Radius: 3
@@ -1449,16 +1451,15 @@ MonoBehaviour:
   playerModel: {fileID: 5934602721084618137}
   camPos: {fileID: 4403574208859506376}
   groundCheckObj: {fileID: 2193265474851727066}
-  speed: 100
+  speed: 15
   walkSpeed: 5
   slidesDampingSpeed: 3
-  slidesPower: 20
+  slidesPower: 3
   Landed:
     m_PersistentCalls:
       m_Calls: []
   Damping: 0.25
   moveDamping: 1
-  Speed: 10
   SprintSpeed: 4
   JumpSpeed: 12
   SprintJumpSpeed: 12
@@ -1801,6 +1802,56 @@ MonoBehaviour:
   localUIPrefab: {fileID: 5036568139100021202, guid: b862c18fb5b444e47b3364f69127c0f8, type: 3}
   mainCam: {fileID: 8259760282615980636}
   useTimeStop: 1
+--- !u!54 &5173561185717109091
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8739644263822399044}
+  serializedVersion: 4
+  m_Mass: 20
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 112
+  m_CollisionDetection: 1
+--- !u!136 &3191466555815483674
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8739644263822399044}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 3
+  m_Height: 18.5
+  m_Direction: 1
+  m_Center: {x: 0, y: 9.2, z: 0}
 --- !u!1 &9145861283450148497
 GameObject:
   m_ObjectHideFlags: 0

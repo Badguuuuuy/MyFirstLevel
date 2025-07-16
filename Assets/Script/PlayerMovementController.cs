@@ -10,6 +10,7 @@ public class PlayerMovementController : MonoBehaviour
     private PlayerInputController playerInput;
     private CharacterController characterController;
     private PlayerController playerController;
+    private Rigidbody rb;
 
     [Header("Reference")]
     public GameObject playerModel;
@@ -20,13 +21,26 @@ public class PlayerMovementController : MonoBehaviour
     public float speed = 15f;
     public float walkSpeed = 5f;
     public float slidesDampingSpeed = 30f;
-    public float slidesPower = 20f;
+    public float slidesPower = 1.5f;
+
+    private bool grounded;
+    private Vector3 deltaPosition;
+
+    // 커스텀 보정 범위 설정
+    float slopeMinBoost = 0.5f;   // 경사면 역방향일 때 최소 속도
+    float slopeMaxBoost = 2f;   // 경사면 방향일 때 최대 속도
 
     private Transform modelTransform;
-    private GroundChecker groundChecker;
+    //private GroundChecker groundChecker;
     private float slopeLimit;
     private Vector3 GroundHitNormal;
-    private Vector3 m_lastVelocityXZ;
+    private Vector3 m_SlideVelocityXZ;
+    private Vector3 m_SlideStartVelocityXZ;
+    private float slidesAccel_Elapsed = 0f;
+    Vector3 slopeDir;
+    private bool m_IsInSlope = false;
+
+    private float slideFriction = 10f;
 
     float rotationSpeed = 3f;
 
@@ -39,6 +53,8 @@ public class PlayerMovementController : MonoBehaviour
     private int maxJumpCnt = 2;
     private bool wasJumped = false;
     private bool m_LastIsJumping = false;
+    private bool m_wasCrouching = false;
+    private bool crouchingPressed = false;
 
 
     public Action StartJump;
@@ -58,8 +74,8 @@ public class PlayerMovementController : MonoBehaviour
 
     public float moveDamping = 1f;
 
-    [Tooltip("Ground speed when walking")]
-    public float Speed = 1f;
+    //[Tooltip("Ground speed when walking")]
+    //public float Speed = 1f;
     [Tooltip("Ground speed when sprinting")]
     public float SprintSpeed = 4;
     [Tooltip("Initial vertical speed when jumping")]
@@ -84,9 +100,12 @@ public class PlayerMovementController : MonoBehaviour
 
     Vector3 UpDirection => UpMode == UpModes.World ? Vector3.up : transform.up;
 
-    [HideInInspector] public bool IsGrounded() => GetDistanceFromGround(transform.position, UpDirection, 10) < 0.01f;
+    //[HideInInspector] public bool IsGrounded() => GetDistanceFromGround(transform.position, UpDirection, 10) < 0.01f;
     [HideInInspector] public bool m_IsJumping { get; private set; }
+    [HideInInspector] public bool m_IsCrouching { get; private set; }
     [HideInInspector] public bool m_IsSliding { get; private set; }
+
+    [HideInInspector] public bool m_IsAccelSliding { get; private set; }
     [HideInInspector] public bool m_CanMove { get; set; }
 
     [HideInInspector] public bool m_CanTurn180 = true;
@@ -97,6 +116,8 @@ public class PlayerMovementController : MonoBehaviour
     Vector3 m_CurrentVelocityXZ;
     Vector3 m_JumpStartVelocityXZ;
     bool m_IsSprinting;
+
+    Vector3 x;
 
 
     int pakourLayerMask;
@@ -116,16 +137,17 @@ public class PlayerMovementController : MonoBehaviour
         m_TimeLastGrounded = Time.time;
 
         modelTransform = playerModel.transform;
-        groundChecker = groundCheckObj.GetComponent<GroundChecker>();
+        //groundChecker = groundCheckObj.GetComponent<GroundChecker>();
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        rb = GetComponent<Rigidbody>();
         playerController = GetComponent<PlayerController>();
         playerInput = GetComponent<PlayerInputController>();
-        characterController = GetComponent<CharacterController>();
-        slopeLimit = characterController.slopeLimit;
+        //characterController = GetComponent<CharacterController>();
+        //slopeLimit = characterController.slopeLimit;
         //animator = playerModel.GetComponent<Animator>();
         //StartCoroutine("Routine");
         pakourLayerMask = 1 << LayerMask.NameToLayer("ParkourStructure");
@@ -164,18 +186,71 @@ public class PlayerMovementController : MonoBehaviour
     {
         if (playerController.CurrentState != playerController.uiState)
         {
-            LedgeGrap();
-            ProcessJump();
+            GroundCheck(rb.position, UpDirection);
             Move();
-            Slide();
-            
         }
-        Debug.Log("점프카운트: " + jumpCnt);
+            /*
+            grounded = IsGrounded();
+            //slopeDir = Vector3.ProjectOnPlane(-UpDirection, GroundHitNormal).normalized;
+            Vector3 projected = Vector3.ProjectOnPlane(-UpDirection, GroundHitNormal);
+            if (projected.sqrMagnitude < 1e-6f)  // 너무 작으면
+            {
+                slopeDir = UpDirection; // 또는 적절한 기본값
+            }
+            else
+            {
+                slopeDir = projected.normalized;
+            }
+            if (playerController.CurrentState != playerController.uiState)
+            {
+                LedgeGrap();
+                ProcessJump();
+                Move();
+                Slide();
+
+            }
+            //Debug.Log("Grounded: " + grounded);
+            //Debug.Log("점프카운트: " + jumpCnt);
+            //Debug.Log("슬로프 방향 대비 좌우입력값: " + x);
+            */
     }
     private void Move()
     {
+        // Get the reference frame for the input
+        var rawInput = new Vector3(playerInput.MoveX.Value, 0, playerInput.MoveZ.Value);
+        float cameraYRotation = camPos.transform.eulerAngles.y;
+        var inputFrame = Quaternion.Euler(0, cameraYRotation, 0);
+        m_LastRawInput = rawInput;
+
+        // Read the input from the user and put it in the input frame
+        m_LastInput = inputFrame * rawInput;                            /////확인 필요(카메라 기준으로 입력 받아 벡터 계산하는듯 함)
+        if (m_LastInput.sqrMagnitude > 1)
+            m_LastInput.Normalize();
+
+        deltaPosition = m_LastInput * speed * Time.fixedDeltaTime;
+
+        var slopePosition = Vector3.ProjectOnPlane(deltaPosition, GroundHitNormal).normalized * deltaPosition.magnitude;
+
+        var slopeAngle = Vector3.ProjectOnPlane(-UpDirection, GroundHitNormal);
+
+        float alignment = Vector3.Dot(slopePosition.normalized, slopeAngle.normalized);
+
+        float t = (alignment + 1f) * 0.5f;
+        float slopeBoost = Mathf.Lerp(slopeMinBoost, slopeMaxBoost, t);
+
+        rb.MovePosition(rb.position + (slopePosition * slopeBoost));
+
+        //Debug.Log("linearVelocity: " + rb.linearVelocity.magnitude);
+        //Debug.Log("GroundHitNormal: " + GroundHitNormal);
+        Debug.Log("deltaPosition.magnitude: " + deltaPosition.magnitude + "slopePosition.magnitude: " + slopePosition.magnitude);
+    }
+    /*
+    private void Move()
+    {
+
         if (playerController.CurrentState != playerController.actionState)
         {
+
             // Process Jump and gravity
             //bool justLanded = ProcessJump();
 
@@ -190,6 +265,8 @@ public class PlayerMovementController : MonoBehaviour
             if (m_LastInput.sqrMagnitude > 1)
                 m_LastInput.Normalize();
 
+            //Debug.Log("m_LastInput: " + m_LastInput);
+
             // Compute the new velocity and move the player
             var desiredVelocity = m_LastInput * Speed;
             var damping = Damping;
@@ -203,7 +280,7 @@ public class PlayerMovementController : MonoBehaviour
             {
                 m_CurrentVelocityXZ += Damper.Damp(
                     desiredVelocity - m_CurrentVelocityXZ, damping, Time.deltaTime);
-                Debug.Log("중");
+                //Debug.Log("중");
             }
 
             m_JumpStartVelocityXZ = m_CurrentVelocityXZ;
@@ -212,11 +289,11 @@ public class PlayerMovementController : MonoBehaviour
 
             ApplyMotion();
         }
-    }
-    
+    }*/
+    /*
     void ApplyMotion()
     {
-        Debug.Log("isSliding" + m_IsSliding);
+        
         if (characterController != null && playerController.CurrentState != playerController.actionState)
         {
             //float finalVelocityY = Mathf.Sqrt(m_CurrentVelocityY);
@@ -226,31 +303,94 @@ public class PlayerMovementController : MonoBehaviour
             {
                 if (m_IsSliding) ////땅에서 슬라이딩 시
                 {
-                    Vector3 slopeDir = Vector3.ProjectOnPlane(-UpDirection, GroundHitNormal).normalized;
+                    Vector3 slopeRight;
 
-                    m_lastVelocityXZ = Vector3.Slerp(m_lastVelocityXZ, Gravity / 2 * slopeDir, slidesDampingSpeed * Time.deltaTime);
+                    ////슬로프 기준 좌우 방향
+                    if (Vector3.Angle(GroundHitNormal, Vector3.up) == 0f) // 거의 평지일 때
+                    {
+                        slopeRight = camPos.transform.right; // 카메라 기준 오른쪽 벡터를 사용
+                    }
+                    else
+                    {
+                        slopeRight = Vector3.Cross(GroundHitNormal, slopeDir).normalized;
+                    }
+                    
+                    
+                    var rawInput = new Vector3(playerInput.MoveX.Value, 0f, 0f);
+                    float cameraYRotation = camPos.transform.eulerAngles.y;
+                    var inputFrame = Quaternion.Euler(0, cameraYRotation, 0);
+                    var lastXInput = inputFrame * rawInput;
+                    if (lastXInput.sqrMagnitude > 1)
+                        lastXInput.Normalize();
 
-                    finalVelocity = m_lastVelocityXZ;
+                    Vector3 projected = Vector3.Project(lastXInput, slopeRight);
+                    x = projected;
 
-                    //finalVelocity = Gravity / 2 * slopeDir;
+                    if (m_IsAccelSliding)
+                    {
 
-                    Debug.Log("slopeDir: " + slopeDir + "finalVel: " + finalVelocity);
+                        slidesAccel_Elapsed += Time.deltaTime;
+                        if (slidesAccel_Elapsed < 0.2f)
+                        {
+                            if (Vector3.Angle(GroundHitNormal, Vector3.up) == 0f) 
+                            {
+                                m_SlideVelocityXZ = m_SlideStartVelocityXZ * slidesPower;
+                            }
+                            else
+                            {
+                                m_SlideVelocityXZ = Vector3.ProjectOnPlane(m_SlideStartVelocityXZ * slidesPower, GroundHitNormal);
+                            }
+                        }
+                        else
+                        {
+                            m_IsAccelSliding = false;
+                            slidesAccel_Elapsed = 0f;
+                        }
+                    }
+                    else
+                    {
+                        if (m_IsInSlope)
+                        {
+                            Debug.Log("경사슬라이딩중");
+                            m_SlideVelocityXZ = Vector3.Lerp(m_SlideVelocityXZ, (Gravity / 2f) * slopeDir + x * 20f, slidesDampingSpeed * Time.deltaTime); //기존 슬라이딩
+                        }
+                        else
+                        {
+                            m_SlideVelocityXZ = Vector3.Lerp(m_SlideVelocityXZ, Vector3.zero, slidesDampingSpeed * Time.deltaTime);
+                            //m_SlideVelocityXZ = Vector3.Lerp(m_SlideVelocityXZ, m_SlideVelocityXZ.normalized + x * 20f, slidesDampingSpeed * Time.deltaTime);
+                        }
+                    }
+                    
+                    finalVelocity = m_SlideVelocityXZ;
                 }
-                else ////땅에서 슬라이딩 하지 않을 시
+                else if (m_IsCrouching) ////땅에서 앉아서 이동할 시
                 {
-                    finalVelocity = Vector3.ProjectOnPlane((m_CurrentVelocityY * UpDirection + m_CurrentVelocityXZ), GroundHitNormal);
-                    m_lastVelocityXZ = Vector3.ProjectOnPlane(m_CurrentVelocityXZ, GroundHitNormal);
+                    finalVelocity = Vector3.ProjectOnPlane(((m_CurrentVelocityXZ / 2)), GroundHitNormal) + (m_CurrentVelocityY * UpDirection);
+                    m_SlideVelocityXZ = Vector3.ProjectOnPlane(m_CurrentVelocityXZ, GroundHitNormal);
                 }
+                else ////땅에서 서서 이동할 시
+                {
+                    finalVelocity = Vector3.ProjectOnPlane(((m_CurrentVelocityXZ)), GroundHitNormal) + (m_CurrentVelocityY * UpDirection);
+                    m_SlideVelocityXZ = Vector3.ProjectOnPlane(m_CurrentVelocityXZ, GroundHitNormal);
+                }
+            }
+            else if (crouchingPressed)
+            {
+                Debug.Log("12");
+                finalVelocity = m_CurrentVelocityY * UpDirection + m_SlideVelocityXZ;
             }
             else ////점프 중일 시
             {
-                finalVelocity = m_CurrentVelocityY * UpDirection + m_lastVelocityXZ;
-                //m_lastVelocityXZ = Vector3.ProjectOnPlane(m_CurrentVelocityXZ, GroundHitNormal);
-                m_lastVelocityXZ = Vector3.Slerp(m_lastVelocityXZ, m_CurrentVelocityXZ, Time.deltaTime);
+                //finalVelocity = m_CurrentVelocityY * UpDirection + m_SlideVelocityXZ;
+                finalVelocity = m_CurrentVelocityY * UpDirection + m_CurrentVelocityXZ;
+                m_SlideVelocityXZ = m_CurrentVelocityXZ;
+
+                //m_SlideVelocityXZ = Vector3.Slerp(m_SlideVelocityXZ, m_CurrentVelocityXZ, Time.deltaTime);
             }
 
-           
+
             //characterController.Move((m_CurrentVelocityY * UpDirection + m_CurrentVelocityXZ) * Time.deltaTime);
+            //Debug.Log("finalVelocity: " + finalVelocity + "m_SlideVelocityXZ: " + m_SlideVelocityXZ + "m_CurrentVelocityXZ: " + m_CurrentVelocityXZ + "GroundHitNormal: " + GroundHitNormal + "slopeDir: " + slopeDir);
             characterController.Move(finalVelocity * Time.deltaTime);
         }
         /*
@@ -277,13 +417,14 @@ public class PlayerMovementController : MonoBehaviour
             }
             transform.position = pos + m_CurrentVelocityY * up * Time.deltaTime;
         }
-        */
-    }
+        
+    }*/
+    /*
     bool ProcessJump()
     {
         bool justLanded = false;
         var now = Time.time;
-        bool grounded = IsGrounded();
+        
         float slopeAngle = Vector3.Angle(GroundHitNormal, UpDirection);
         //bool grounded = groundChecker.isGrounded;
         //Debug.Log("그라운디드: " + grounded);
@@ -317,7 +458,7 @@ public class PlayerMovementController : MonoBehaviour
         if (m_IsJumping && !m_LastIsJumping) //점프가 입력되어 실행되기 시작하는 프레임에서만 딱 한 번 실행되어야함.(공중에서 계속 반복 실행되면 안됨)
         {
             StartFall?.Invoke();
-            grounded = false;
+            //grounded = false;
         }
 
 
@@ -341,27 +482,65 @@ public class PlayerMovementController : MonoBehaviour
 
         return justLanded;
     }
+    */
+
+    private void GroundCheck(Vector3 pos, Vector3 up)
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(pos, -up, out hit, 0.1f, GroundLayers, QueryTriggerInteraction.Ignore))
+        {
+            GroundHitNormal = hit.normal;
+            grounded = true;
+        }
+        else
+        {
+            GroundHitNormal = up;
+            grounded = false;
+        }
+    }
+
+    /*
     float GetDistanceFromGround(Vector3 pos, Vector3 up, float max)
     {
         
-        Vector3 boxSize = new Vector3(0.7f, 0.01f, 0.7f); // 2D 평면처럼 사용
+        Vector3 boxSize = new Vector3(0.85f, 0.01f, 0.85f); // 2D 평면처럼 사용
         float extraHeight = 0.15f;
-
-        RaycastHit hit1;
+        float extra = 0.1f;
+        //RaycastHit hit1;
         float a = 0.35f;
         //Physics.SphereCast(pos + a * up, a, -up, out hit1, 0f, GroundLayers, QueryTriggerInteraction.Ignore);
+
+        Physics.Raycast(pos, Vector3.forward, 1f, GroundLayers, QueryTriggerInteraction.Ignore);
 
         RaycastHit hit;
         if (Physics.BoxCast(pos + up * extraHeight, boxSize / 2f, -up, out hit, Quaternion.identity, 0.5f, GroundLayers, QueryTriggerInteraction.Ignore))
         //if(Physics.SphereCast(pos + a * up, a, -up, out hit1, 0.1f, GroundLayers, QueryTriggerInteraction.Ignore))
+        //if(Physics.Raycast(pos - up * extra, dir, out hit, 1f, GroundLayers, QueryTriggerInteraction.Ignore))
         {
-            //Debug.Log("바닥박스캐스트감지중");
-            GroundHitNormal = hit.normal;
-            return hit.distance - extraHeight;
+            if (float.IsNaN(hit.normal.x) || float.IsNaN(hit.normal.y) || float.IsNaN(hit.normal.z))
+            {
+                // 이상하면 기본값 할당
+                Debug.Log("NAN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                GroundHitNormal = Vector3.up;
+            }
+            else
+            {
+                //Debug.Log("바닥박스캐스트감지중");
+                GroundHitNormal = hit.normal;
+                return hit.distance - extraHeight;
+                
+            }
+            
+        }
+        else
+        {
+            GroundHitNormal = Vector3.up;
         }
         return max + 1f; // 바닥을 찾지 못한 경우
     }
+    */
 
+    /*
     void LedgeGrap()
     {
         if (playerController.CurrentState != playerController.actionState)
@@ -450,10 +629,12 @@ public class PlayerMovementController : MonoBehaviour
 
         transform.position = endPos;
 
-        TurnOn_CanMove();   
+        playerController.SwitchState(playerController.idleState);
+        LedgeGrap_AnimEnd?.Invoke();
 
     }
-
+    */
+    /*
     IEnumerator JumpCooldownCoroutine()
     {
         isJumpCooling = true;
@@ -461,43 +642,65 @@ public class PlayerMovementController : MonoBehaviour
         isJumpCooling = false;
         jumpCooldownCoroutine = null; //상위 클래스나 인터페이스 등등으로 구현해서 쿨다운 스킬들을 전부 코루틴을 묶어서 관리하기
     }
-
-    void TurnOn_CanMove()
-    {
-        playerController.SwitchState(playerController.idleState);
-        LedgeGrap_AnimEnd?.Invoke();
-    }
+    */
+    /*
     void Slide()
     {
-        bool grounded = IsGrounded();
-        bool crouchPressed = _lastCrouchValue <= 0 && playerInput.Crouch.Value > 0;
-
-        if ((playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState) && grounded && !m_IsJumping) 
+        if ((playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState)) 
         {
-            
-            if (playerInput.MoveZ.Value > 0 && crouchPressed)
+            if (playerInput.Crouch.Value > 0 && grounded && !m_IsJumping)
             {
-                //Debug.Log("앉음");
-                Vector3 pow = new Vector3(0f, 0f, slidesPower);
-                Quaternion rot = Quaternion.LookRotation(m_lastVelocityXZ);
-                Vector3 rotated = rot * pow;
-                m_CurrentVelocityXZ += rotated;
-            }
-            else if (playerInput.Crouch.Value > 0)
-            {
-                //경사면 슬라이딩 동작
-                m_IsSliding = true;
+                m_IsCrouching = true;
 
+                bool crouchingStarted = m_IsCrouching && !m_wasCrouching;
+
+                if (playerInput.MoveZ.Value > 0 && crouchingStarted)
+                {
+                    m_IsSliding = true;
+                    m_IsAccelSliding = true;
+                    m_SlideStartVelocityXZ = m_CurrentVelocityXZ;
+                    
+                }
+                //if (m_SlideVelocityXZ.magnitude < 3f)
+                if (!m_IsAccelSliding)
+                {
+                    if (Vector3.Angle(GroundHitNormal, Vector3.up) == 0f) // 거의 평지일 때
+                    {
+                        m_IsInSlope = false;
+                        //Debug.Log(m_SlideVelocityXZ);
+                        //Debug.Log(m_SlideVelocityXZ.magnitude);
+                        if (m_SlideVelocityXZ.magnitude < 1f)
+                        {
+                            m_IsSliding = false;
+                        }
+                    }
+                    else if (Vector3.Dot(m_SlideVelocityXZ, slopeDir) < 1f) // 경사면일 때
+                    {
+                        m_IsInSlope = true;
+                        m_IsSliding = false;
+                    }
+                }
             }
             else
             {
+                m_IsCrouching = false;
                 m_IsSliding = false;
             }
+            if (playerInput.Crouch.Value > 0)
+            {
+                Debug.Log("야");
+                crouchingPressed = true;
+            }
+            else
+            {
+                crouchingPressed = false;
+            }
         }
-        else
-        {
-            m_IsSliding = false;
-        }
+        m_wasCrouching = m_IsCrouching;
         _lastCrouchValue = playerInput.Crouch.Value;
     }
+    bool IsWithinBounds(Vector3 pos, float maxValue)
+    {
+        return Mathf.Abs(pos.x) <= maxValue && Mathf.Abs(pos.z) <= maxValue;
+    }*/
 }
