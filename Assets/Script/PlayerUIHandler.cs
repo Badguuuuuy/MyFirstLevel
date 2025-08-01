@@ -27,6 +27,7 @@ public class PlayerUIHandler : MonoBehaviour
             GameObject uiInstance = Instantiate(localUIPrefab);
             localUIManager = uiInstance.GetComponent<LocalUIManager>();
             localUIManager.transform.GetComponent<Canvas>().worldCamera = mainCam.uiCam;
+            localUIManager.player = gameObject;
         }
         else
         {
@@ -71,6 +72,7 @@ public class PlayerUIHandler : MonoBehaviour
         }
         else if (Cursor.lockState == CursorLockMode.Locked)
         {
+            Debug.Log("ø¿¿Ã ∏∂∂º");
             prePlayerState = playerController.CurrentState;
             playerController.SwitchState(playerController.uiState);
 

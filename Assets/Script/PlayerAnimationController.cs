@@ -12,6 +12,7 @@ public class PlayerAnimationController : MonoBehaviour
 
     PlayerController playerController;
     CharacterController charController; // CharacterController
+    Rigidbody rb;
     PlayerInputController playerInput;
     PlayerMovementController playerMovementController;
 
@@ -42,6 +43,8 @@ public class PlayerAnimationController : MonoBehaviour
 
     private float _verticalViewAngle;
     private float _horizontalViewAngle;
+
+    private bool rotateSpine = false;
 
     private Quaternion hipOriginalYawRotation = Quaternion.Euler(0f, 0f, 0f);
     public float maxYawAngle = 40f;  // 최댓값 (40도)
@@ -96,19 +99,28 @@ public class PlayerAnimationController : MonoBehaviour
         charController = player.GetComponent<CharacterController>();
         playerInput = player.GetComponent<PlayerInputController>();
         playerMovementController = player.GetComponent<PlayerMovementController>();
+        rb = player.GetComponent<Rigidbody>();
 
         playerInput.OnRightClickedToAim += ToAimCamera;
         playerInput.OnRightClickedToFreeLook += ToFreeLookCamera;
         playerInput.OnZButtonPressed += EquipUnequip;
 
         playerMovementController.Turn180 += PlayAnim_Turn180;
-        playerMovementController.LedgeGrap_Anim += PlayAnim_LedgeClimb;
-        playerMovementController.LedgeGrap_AnimEnd += EndAnim_LedgeClimb;
+        playerMovementController.StartLedgeGrap_Anim += PlayAnim_LedgeClimb;
+        playerMovementController.EndLedgeGrap_Anim += EndAnim_LedgeClimb;
+        playerMovementController.StartDash_Anim += PlayAnim_Dash;
+        playerMovementController.StartSlide_Anim += PlayAnim_Slide;
+        playerMovementController.EndSlide_Anim += EndAnim_Slide;
+        playerMovementController.StartCrouch_Anim += PlayAnim_Crouch;
+        playerMovementController.EndCrouch_Anim += EndAnim_Crouch;
+        playerMovementController.StartWallRun_Anim += PlayAnim_WallRun;
+        playerMovementController.EndWallRun_Anim += EndAnim_Wallrun;
+
         //playerController.Turn180 += PlayAnim_Turn180;
 
-        playerMovementController.StartJump += () => m_AnimationParams.JumpTriggered = true;
-        playerMovementController.StartFall += () => m_AnimationParams.FallTriggered = true;
-        playerMovementController.EndJump += () => m_AnimationParams.LandTriggered = true;
+        playerMovementController.StartJump_Anim += () => m_AnimationParams.JumpTriggered = true;
+        playerMovementController.StartFall_Anim += () => m_AnimationParams.FallTriggered = true;
+        playerMovementController.EndJump_Anim += () => m_AnimationParams.LandTriggered = true;
 
         PlayerIdleAnim_Inter.OnUnequiping += UnEquip;
 
@@ -179,12 +191,52 @@ public class PlayerAnimationController : MonoBehaviour
             }
         }
 
+        
     }
     
     // Update is called once per frame
     void LateUpdate()
     {
-        transform.rotation = Quaternion.Euler(0f, camPos.eulerAngles.y, 0f);
+        //rotateSpine = animator.GetBool("RotateSpine");
+        /*
+        if (playerMovementController.m_isWallRunning)
+        {
+            //transform.rotation = Quaternion.Euler(playerMovementController.wallForwardDir.x, 0f , playerMovementController.wallForwardDir.z);
+        }
+        */
+        //else
+        //{
+        //animator.SetBool("WallRunning", playerMovementController.m_isWallRunning);
+
+        //animator.SetBool("Sliding", playerMovementController.m_IsSliding);
+
+        //animator.SetBool("Crouching", playerMovementController.m_IsCrouching);
+
+        if (playerMovementController.isWallRight) 
+        {
+            animator.SetFloat("WallDetected", 1f); 
+        }
+        else
+        {
+            animator.SetFloat("WallDetected", 0f);
+        }
+
+        if (playerMovementController.m_fsm.currentState is PlayerMovementController.WallRunState)
+        {
+            transform.rotation = Quaternion.LookRotation(new Vector3(playerMovementController.wallForwardDir.x, 0f, playerMovementController.wallForwardDir.z).normalized);
+        }
+        //else if(playerMovementController.m_fsm.currentState is PlayerMovementController.SlideState && !(playerMovementController.m_fsm.currentState is PlayerMovementController.JumpState || playerMovementController.m_fsm.currentState is PlayerMovementController.FallState))
+        else if(playerMovementController.m_fsm.currentState is PlayerMovementController.AccelSlideState || playerMovementController.m_fsm.currentState is PlayerMovementController.SlideState)
+        {
+            transform.rotation = Quaternion.LookRotation(new Vector3(rb.linearVelocity.normalized.x, 0f, rb.linearVelocity.normalized.z)); //이동방향 고정
+        }
+        else
+        {
+            transform.rotation = Quaternion.Euler(0f, camPos.eulerAngles.y, 0f);
+        }
+        //}
+
+        //transform.rotation = Quaternion.Euler(0f, camPos.eulerAngles.y, 0f);
 
         //if ((playerInput.MoveX.Value != 0f) || (playerInput.MoveZ.Value != 0f)) //////wasd 입력이 하나라도 있으면
 
@@ -211,13 +263,18 @@ public class PlayerAnimationController : MonoBehaviour
         m_AnimationParams.FallTriggered = false;
         m_AnimationParams.LandTriggered = false;
 
+        
+
         RotateSpine();
+
+        //player.transform.rotation = Quaternion.Euler(0f, Camera.main.transform.rotation.eulerAngles.y, 0f);
     }
     private void FixedUpdate()
     {
+        /*
         if (playerController.CurrentState == playerController.moveState)
         {
-            //player.transform.rotation = Quaternion.Euler(0f, Camera.main.transform.rotation.eulerAngles.y, 0f);
+            
         }
         else if (playerController.CurrentState == playerController.idleState)
         {
@@ -233,73 +290,80 @@ public class PlayerAnimationController : MonoBehaviour
                 //transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0f, Camera.main.transform.rotation.eulerAngles.y, 0f), 10f * Time.deltaTime);
             }
         }
+        */
     }
 
     private void RotateSpine()
     {
         bool rotSpine = animator.GetBool("RotSpine");
-        //int horizontalCross = Vector3.Cross(transform.right, camPos.right).y > 0 ? 1 : -1;
-        _verticalViewAngle = Vector3.SignedAngle(camPos.up, transform.up, camPos.right); ///campos와 transform의 수직 각도 차이
-        //_horizontalViewAngle = Vector3.Angle(transform.right, camPos.right); ///campos와 transform의 수평 각도 차이
-        /*
-        var posX = animator.GetFloat("Pos X");
-        var posY = animator.GetFloat("Pos Y");
 
-        float mappedValue;
+        _verticalViewAngle = Vector3.SignedAngle(transform.up, camPos.up, camPos.right); ///campos와 transform의 수직 각도 차이
 
-        if (posY > 0)
-        {
-            if (posX <= -0.7f)
-            {
-                // -1에서 -0.7 사이에서 점진적으로 0으로 수렴하는 방식
-                mappedValue = Mathf.Lerp(0f, maxValue, Mathf.InverseLerp(-1f, -0.7f, posX));
-            }
-            else if (posX >= 0.7f)
-            {
-                // 0.7에서 1 사이에서 점진적으로 0으로 수렴하는 방식
-                mappedValue = Mathf.Lerp(minValue, 0f, Mathf.InverseLerp(0.7f, 1f, posX));
+        var verticalRotate = Quaternion.AngleAxis(_verticalViewAngle, transform.right);
 
-            }
-            else
-            {
-                // -0.7과 0.7 사이에서는 선형 보간
-                mappedValue = Mathf.Lerp(maxValue, minValue, Mathf.InverseLerp(-0.7f, 0.7f, posX));
-            }
-        }
-        else
-        {
-            mappedValue = 0f;
-        }
+        var finalVerticalRotation = verticalRotate * MainBone.spine.rotation;
 
-        hipOriginalYawRotation = Quaternion.Euler(0f, mappedValue, 0f);
-        */
 
-        Quaternion finalHorizontalRotation = MainBone.spine.rotation;
+        Quaternion finalHorizontalRotation_Action = Quaternion.AngleAxis(camPos.eulerAngles.y, transform.up);
 
-        var boneForwardOffsetCalculate = transform.rotation; ///힙 대신 트랜스폼을 상하 회전의 기준축으로 잡기 위한 오프셋
-
-        var verticalRotate = Quaternion.AngleAxis(-_verticalViewAngle, boneForwardOffsetCalculate * Vector3.right);
-
-        var finalRotation = verticalRotate * finalHorizontalRotation;
-
-        Quaternion finalHorizontalRotation_Action = Quaternion.AngleAxis(camPos.eulerAngles.y, boneForwardOffsetCalculate * Vector3.up);
-
-        var verticalRotate_Action = Quaternion.AngleAxis(-_verticalViewAngle + 35f, boneForwardOffsetCalculate * Vector3.right);
+        var verticalRotate_Action = Quaternion.AngleAxis(_verticalViewAngle + 35f, camPos.right);
 
         var finalRotation_Action = verticalRotate_Action * finalHorizontalRotation_Action;
 
-        if (playerMovementController.m_CanMove)
-        {
-            if (rotSpine == false)
+
+
+
+        var horizontalRotate = Quaternion.AngleAxis(camPos.eulerAngles.y, transform.up);
+
+        var finalHorizontalRotation = horizontalRotate;
+
+        var boneForwardOffsetCalculate = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y + camPos.rotation.eulerAngles.y, 0);
+
+        var verticalRotate1 = Quaternion.AngleAxis(_verticalViewAngle, camPos.right);
+
+        var finalRotation = verticalRotate1 * finalHorizontalRotation;// * MainBone.spine.rotation;
+
+
+        var ang = camPos.rotation * Quaternion.Euler(new Vector3(0f, transform.eulerAngles.y, 0f));
+
+        var angle = ang * MainBone.spine.rotation;// * Quaternion.Inverse(transform.rotation); ////플레이어 모델 기준으로 회전함 수정 필요
+        
+
+        ////액션 상태, 공격 애니메이션, 월런 등 애니메이션 및 상태 조건에 따라 처리 방법 다르게 적용
+
+        //if (playerController.CurrentState != playerController.actionState)
+        //{
+            if(rotSpine) //공격 시 강제 해당 방향 회전 및 애니메이션에 맞춰 회전 각도 보정
             {
-                MainBone.spine.rotation = finalRotation;
+                MainBone.spine.rotation = Quaternion.Slerp(MainBone.spine.rotation, finalRotation_Action, Time.deltaTime * 350f);
             }
             else
             {
-                //MainBone.spine.rotation = finalRotation_Action;
-                MainBone.spine.rotation = Quaternion.Slerp(MainBone.spine.rotation, finalRotation_Action, Time.deltaTime * 350f);
+                if(playerMovementController.m_fsm.currentState is PlayerMovementController.ClimbState || playerMovementController.m_fsm.currentState is PlayerMovementController.WallRunState || playerMovementController.m_fsm.currentState is PlayerMovementController.AccelSlideState || playerMovementController.m_fsm.currentState is PlayerMovementController.SlideState)
+                {
+                    //MainBone.spine.rotation = finalRotation_Action;
+                    //아무것도 안 함
+                }
+                else
+                {
+                    MainBone.spine.rotation = finalVerticalRotation;
+                }
             }
+        //}
+
+        //Debug.Log(playerMovementController.m_isWallRunning);
+        //Debug.Log("수평회전: " + horizontalRotate.eulerAngles + " 척추: " + MainBone.spine.rotation.eulerAngles + " 캠포스: " + camPos.eulerAngles);
+        /*
+        if (true)//playerController.CurrentState == playerController.wallRunState)
+        {
+            MainBone.spine.rotation = camPos.rotation * MainBone.spine.rotation * Quaternion.Euler(0f, 35.4f, 0f);//angle;
+            Debug.Log("camPos" + camPos.rotation.eulerAngles.y + " 메인본 y: " + MainBone.spine.rotation.eulerAngles.y + " 곱: " + camPos.rotation * MainBone.spine.rotation);
         }
+        else if (playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState)
+        {
+            MainBone.spine.rotation = finalVerticalRotation;
+        }
+        */
     }
 
     IEnumerator BodyTurn(float angle)
@@ -351,6 +415,35 @@ public class PlayerAnimationController : MonoBehaviour
     {
         animator.SetBool("CanJump", true);
     }
+    private void PlayAnim_Slide()
+    {
+        animator.SetBool("Sliding", true);
+    }
+    private void EndAnim_Slide()
+    {
+        animator.SetBool("Sliding", false);
+    }
+    private void PlayAnim_Crouch()
+    {
+        animator.SetBool("Crouching", true);
+    }
+    private void EndAnim_Crouch()
+    {
+        animator.SetBool("Crouching", false);
+    }
+    private void PlayAnim_WallRun()
+    {
+        animator.SetBool("WallRunning", true);
+    }
+    private void EndAnim_Wallrun()
+    {
+        animator.SetBool("WallRunning", false);
+    }
+    private void PlayAnim_Dash(Vector3 dashInput)
+    {
+
+    }
+
     private void EquipUnequip()
     {
         if (!playerInput.GetIsEquiping())

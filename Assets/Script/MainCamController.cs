@@ -19,6 +19,9 @@ public class MainCamController : MonoBehaviour
 
     public Camera uiCam;
 
+    private PlayerMovementController playerMovementController;
+    private CinemachineThirdPersonFollow mainCamThirdPersonFollow;
+
     Vector3 targetPosition;
 
     Transform m_ControllerTransform;
@@ -43,6 +46,11 @@ public class MainCamController : MonoBehaviour
 
     public CouplingMode couplingMode;
 
+    private void Awake()
+    {
+        playerMovementController = player.GetComponent<PlayerMovementController>();
+    }
+
     private void OnEnable()
     {
         //m_Controller = player.GetComponent<PlayerMovementController>();
@@ -64,8 +72,9 @@ public class MainCamController : MonoBehaviour
 
         mainCamInstance = Instantiate(mainCamPrefab);
         uiCamInstance = Instantiate(uiCamPrefab);
+        mainCamThirdPersonFollow = mainCamInstance.GetComponent<CinemachineThirdPersonFollow>();
 
-
+        mainCamThirdPersonFollow.CameraSide = 1f;
 
         mainCamInstance.Target.TrackingTarget = camPos.transform;
 
@@ -79,8 +88,7 @@ public class MainCamController : MonoBehaviour
         //var t = camPos;
         //var yValue = Mathf.Clamp(playerController.HorizontalLook.Value, );
         //Debug.Log(playerController.VerticalLook.Value);
-        if (Cursor.lockState == CursorLockMode.Locked)
-            camPos.rotation = Quaternion.Euler(playerInput.VerticalLook.Value, playerInput.HorizontalLook.Value, 0);
+        
         //m_DesiredWorldRotation = t.rotation;
 
         //RecenterPlayer();
@@ -91,7 +99,17 @@ public class MainCamController : MonoBehaviour
     }
     private void FixedUpdate()
     {
-        
+        if (Cursor.lockState == CursorLockMode.Locked)
+            camPos.rotation = Quaternion.Euler(playerInput.VerticalLook.Value, playerInput.HorizontalLook.Value, 0);
+
+        if (playerMovementController.m_isWallRunning && playerMovementController.isWallRight)
+        {
+            mainCamThirdPersonFollow.CameraSide = Mathf.Lerp(mainCamThirdPersonFollow.CameraSide, 0f, 5f * Time.deltaTime);
+        }
+        else
+        {
+            mainCamThirdPersonFollow.CameraSide = Mathf.Lerp(mainCamThirdPersonFollow.CameraSide, 1f, 5f * Time.deltaTime);
+        }
     }
     public void RecenterPlayer(float damping = 0)
     {

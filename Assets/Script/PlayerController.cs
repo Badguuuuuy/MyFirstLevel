@@ -59,6 +59,23 @@ public class ActionState : IPlayerState
         //Debug.Log("Action 상태에서 벗어남");
     }
 }
+public class WallRunState : IPlayerState
+{
+    public void EnterState(PlayerController player)
+    {
+        //Debug.Log("플레이어가 액션 상태에 진입");
+    }
+
+    public void UpdateState(PlayerController player)
+    {
+
+    }
+
+    public void ExitState(PlayerController player)
+    {
+        //Debug.Log("Action 상태에서 벗어남");
+    }
+}
 
 public class UIState : IPlayerState
 {
@@ -85,6 +102,7 @@ public class PlayerController : MonoBehaviour
     public readonly IdleState idleState = new IdleState();
     public readonly MoveState moveState = new MoveState();
     public readonly ActionState actionState = new ActionState();
+    public readonly WallRunState wallRunState = new WallRunState();
     public readonly UIState uiState = new UIState();
     //public readonly AttackState attackState = new AttackState();
 

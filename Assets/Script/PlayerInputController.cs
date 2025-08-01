@@ -136,10 +136,12 @@ public class PlayerInputController : MonoBehaviour, Unity.Cinemachine.IInputAxis
     }
     public void UIOpenMenu(InputAction.CallbackContext context)
     {
+        /*
         if (context.performed)
-        {
-            playerUIHandler.TogglePauseMenu();
-        }
+        {*/
+            //playerUIHandler.TogglePauseMenu();
+            Debug.Log("오이 온나");
+        //}
     }
     public bool GetIsEquiping()
     {
