@@ -257,7 +257,7 @@ public class PlayerAnimationController : MonoBehaviour
             //animator.SetTrigger("Land");
             animator.SetBool("Falling", false);
             animator.SetBool("Jumping", false);
-            StartCoroutine("LandCoroutine");
+            //StartCoroutine("LandCoroutine");
         }
         m_AnimationParams.JumpTriggered = false;
         m_AnimationParams.FallTriggered = false;

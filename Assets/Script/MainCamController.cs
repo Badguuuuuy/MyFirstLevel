@@ -102,9 +102,10 @@ public class MainCamController : MonoBehaviour
         if (Cursor.lockState == CursorLockMode.Locked)
             camPos.rotation = Quaternion.Euler(playerInput.VerticalLook.Value, playerInput.HorizontalLook.Value, 0);
 
-        if (playerMovementController.m_isWallRunning && playerMovementController.isWallRight)
+        if (playerMovementController.m_fsm.currentState is PlayerMovementController.WallRunState && playerMovementController.isWallRight)
         {
             mainCamThirdPersonFollow.CameraSide = Mathf.Lerp(mainCamThirdPersonFollow.CameraSide, 0f, 5f * Time.deltaTime);
+            //Debug.Log("À¸¾Æ¾Æ¾Ç");
         }
         else
         {

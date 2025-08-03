@@ -5,6 +5,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Splines;
+using UnityEngine.Windows;
 using static UnityEngine.Rendering.DebugUI.Table;
 
 public class PlayerMovementController : MonoBehaviour
@@ -118,7 +119,12 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if(m_player.wallDetected && m_player.playerInput.MoveZ.Value >= 1f)
+            else if (m_player.jumpPressed)
+            {
+                m_player.LedgeGrapCheck(fsm, m_player);
+                return;
+            }
+            else if(m_player.wallDetected && m_player.playerInput.MoveZ.Value >= 1f && m_player.speedXZ > 1f)
             {
                 fsm.ChangeState(new WallRunState(fsm, m_player));
                 return;
@@ -133,6 +139,18 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new MoveState(fsm, m_player));
                 return;
             }
+            /*
+            m_player.rb.AddForce(m_player.speed * m_player.m_LastInput, ForceMode.Acceleration);
+
+            Vector3 v = m_player.rb.linearVelocity;
+
+            // XZ축만 감쇠 적용 (y축은 그대로 둠)
+            v.x *= 1f / (1f + m_player.midAirDampingXZ * Time.fixedDeltaTime);
+            v.z *= 1f / (1f + m_player.midAirDampingXZ * Time.fixedDeltaTime);
+
+            m_player.rb.linearVelocity = v;
+            */
+
         }
         public override void HandleInput() { }
         public override void Exit() { /* 상태 종료 시 실행 */ }
@@ -162,7 +180,12 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if (m_player.wallDetected && m_player.playerInput.MoveZ.Value >= 1f)
+            else if (m_player.jumpPressed)
+            {
+                m_player.LedgeGrapCheck(fsm, m_player);
+                return;
+            }
+            else if (m_player.wallDetected && m_player.playerInput.MoveZ.Value >= 1f && m_player.speedXZ > 1f)
             {
                 fsm.ChangeState(new WallRunState(fsm, m_player));
                 return;
@@ -177,7 +200,17 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new MoveState(fsm, m_player));
                 return;
             }
+            
             m_player.Fall(fsm, m_player);
+            /*
+            Vector3 v = m_player.rb.linearVelocity;
+
+            // XZ축만 감쇠 적용 (y축은 그대로 둠)
+            v.x *= 1f / (1f + m_player.midAirDampingXZ * Time.fixedDeltaTime);
+            v.z *= 1f / (1f + m_player.midAirDampingXZ * Time.fixedDeltaTime);
+
+            m_player.rb.linearVelocity = v;
+            */
         }
         public override void HandleInput() { }
         public override void Exit() 
@@ -239,10 +272,10 @@ public class PlayerMovementController : MonoBehaviour
     // -----------------------
     public class SlideState : State
     {
-
-        public SlideState(StateMachine fsm, PlayerMovementController m_player) : base(fsm, m_player)
+        Vector3 slideDir;
+        public SlideState(StateMachine fsm, PlayerMovementController m_player, Vector3 slideStartDir) : base(fsm, m_player)
         {
-
+            slideDir = slideStartDir;
         }
 
         public override void Enter() 
@@ -276,7 +309,7 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new CrouchState(fsm, m_player));
                 return;
             }
-            m_player.Slide(fsm, m_player);
+            m_player.Slide(fsm, m_player, slideDir);
         }
         public override void HandleInput() { }
         public override void Exit() 
@@ -355,13 +388,19 @@ public class PlayerMovementController : MonoBehaviour
     // -----------------------
     public class ClimbState : State
     {
+        Vector3 _endPos;
+        int _type;
 
-        public ClimbState(StateMachine fsm, PlayerMovementController m_player) : base(fsm, m_player)
+        public ClimbState(StateMachine fsm, PlayerMovementController m_player, Vector3 endPos, int type) : base(fsm, m_player)
         {
-
+            _endPos = endPos;
+            _type = type;
         }
 
-        public override void Enter() { /* 상태 진입 시 실행 */ }
+        public override void Enter() 
+        { /* 상태 진입 시 실행 */
+            m_player.StartCoroutine(m_player.LedgeClimbCoroutine(fsm, m_player, _endPos, _type));
+        }
         public override void FixedUpdate()
         { /* 매 프레임 검사 */
 
@@ -403,7 +442,7 @@ public class PlayerMovementController : MonoBehaviour
                     Debug.Log("야호호");
                     return;
                 }
-                else if (!m_player.wallDetected || !(m_player.playerInput.MoveZ.Value >= 1f) || Vector3.Dot(m_player.wallForwardDir, m_player.m_LastInput) < 0f)
+                else if (!m_player.wallDetected || !(m_player.playerInput.MoveZ.Value >= 1f) || Vector3.Dot(m_player.wallForwardDir, m_player.m_LastInput) < 0f || m_player.speedXZ <= 1f)
                 {
                     if (!m_player.grounded)
                     {
@@ -557,6 +596,8 @@ public class PlayerMovementController : MonoBehaviour
 
     public float moveDamping = 1f;
 
+    float midAirDampingXZ = 8f;
+
     // ���� ��ٿ� �ð�
     private float jumpCooldown = 1.2f; // 1�� ���
     private bool isJumpCooling = false;
@@ -665,7 +706,8 @@ public class PlayerMovementController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Debug.Log(m_fsm.currentState);
+        //Debug.Log(speedXZ);
+        //Debug.Log(m_fsm.currentState);
         cameraYRotation = camPos.transform.eulerAngles.y;
         inputFrame = Quaternion.Euler(0, cameraYRotation, 0);
         cameraYdir = inputFrame * Vector3.forward;
@@ -968,14 +1010,23 @@ public class PlayerMovementController : MonoBehaviour
 
         if (slideDurationPassed)
         {
-            fsm.ChangeState(new SlideState(fsm, m_player));
+            fsm.ChangeState(new SlideState(fsm, m_player, slideStartDir));
         }
 
         rb.linearVelocity = slopePosition * slideSpeed;
     }
-    void Slide(StateMachine fsm, PlayerMovementController m_player)
+    void Slide(StateMachine fsm, PlayerMovementController m_player, Vector3 slideDir)
     {
-        
+        Vector3 v = rb.linearVelocity;
+
+        // XZ 속도의 크기만 계산
+        //float speedXZ = new Vector3(vel.x, 0, vel.z).magnitude;
+
+        // 고정된 방향으로 다시 할당
+        Vector3 velocityXZ = slideDir * speedXZ;
+
+        // Y는 그대로
+        rb.linearVelocity = new Vector3(velocityXZ.x, v.y, velocityXZ.z);
     }
     /*
     void Slide(StateMachine fsm, PlayerMovementController m_player)
@@ -1097,7 +1148,7 @@ public class PlayerMovementController : MonoBehaviour
         }
         else if (jumpType == 1)
         {
-            rb.AddForce(m_player.wallNormal * 150f + UpDirection * 200f, ForceMode.Impulse);
+            rb.AddForce(m_player.wallNormal * 350f + UpDirection * 250f, ForceMode.Impulse);
             //rb.useGravity = true;
             //m_isWallRunning = false;
             //playerController.SwitchState(playerController.moveState);
@@ -1154,7 +1205,24 @@ public class PlayerMovementController : MonoBehaviour
     {
         //m_IsJumping = true;
         //공중 이동동작 넣기
-        rb.AddForce((speed / 5) * m_LastInput, ForceMode.Acceleration);
+        //Vector3 inputDir = new Vector3(inputX, 0, inputZ).normalized;
+
+        // 현재 XZ 속도
+        //Vector3 velXZ = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+        //float speed = velXZ.magnitude;
+        /*
+        // 목표 최대 속도
+        float maxAirSpeed = 8f;
+
+        // 속도가 maxAirSpeed에 가까울수록 힘을 줄이기
+        float dampingFactor = Mathf.Clamp01(1f - (speedXZ / maxAirSpeed));
+
+        // 최종 힘 계산
+        Vector3 force = m_LastInput * speed * dampingFactor;
+
+        rb.AddForce(force, ForceMode.Acceleration);
+        */
+        //rb.AddForce(speed * m_LastInput, ForceMode.Acceleration);
     }
     private void GroundCheck(Vector3 pos, Vector3 up)
     {
@@ -1170,15 +1238,15 @@ public class PlayerMovementController : MonoBehaviour
             grounded = false;
         }
     }
-    void LedgeGrap()
+    void LedgeGrapCheck(StateMachine fsm, PlayerMovementController m_player)    ///렛지 확인 및 확인 완료 시 climb 상태 전이
     {
-        if ((playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState) && playerController.CurrentState != playerController.actionState)
-        {
-            if (m_IsJumping)
-            {
-                bool jumpPressed = _lastJumpValue <= 0 && playerInput.Jump.Value > 0;
-                if (jumpPressed)
-                {
+        //if ((playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState) && playerController.CurrentState != playerController.actionState)
+        //{
+            //if (m_IsJumping)
+            //{
+                //bool jumpPressed = _lastJumpValue <= 0 && playerInput.Jump.Value > 0;
+                //if (jumpPressed)
+                //{
                     RaycastHit hit;
 
                     Vector3 origin = transform.position + Vector3.up * 1f;
@@ -1195,26 +1263,29 @@ public class PlayerMovementController : MonoBehaviour
                             ledgeCheck = hit.point + Vector3.up * iter - forward * 0.05f;
                             if (!Physics.Raycast(ledgeCheck, forward, 1f, pakourLayerMask))
                             {
-                                Debug.Log(ledgeClimbCoroutine == null);
-                                if (ledgeClimbCoroutine == null)
-                                {
+                                //Debug.Log(ledgeClimbCoroutine == null);
+                                //if (ledgeClimbCoroutine == null)
+                                //{
                                     //Debug.Log("렛지그랩시작");
-                                    ledgeClimbCoroutine = StartCoroutine(LedgeClimbCoroutine(ledgeCheck + forward * 0.1f, 0));// + (Vector3.up * 0.2f)));
-                                }
+                                    //ledgeClimbCoroutine = StartCoroutine(LedgeClimbCoroutine(fsm, m_player, ledgeCheck + forward * 0.1f, 0));// + (Vector3.up * 0.2f)));
+                                    fsm.ChangeState(new ClimbState(fsm, m_player, ledgeCheck + forward * 0.1f, 0));
+                                    
+                                //}
                                 break;
                             }
                         }
                     }
-                }
-            }
-        }
+                //}
+            //}
+        //}
     }
-    IEnumerator LedgeClimbCoroutine(Vector3 endPos, int type) 
+    IEnumerator LedgeClimbCoroutine(StateMachine fsm, PlayerMovementController m_player, Vector3 endPos, int type) 
     {
-        
+        //fsm.ChangeState(new ClimbState(fsm, m_player));
+
         //m_CanMove = false;
 
-        playerController.SwitchState(playerController.actionState);
+        //playerController.SwitchState(playerController.actionState);
 
         rb.linearVelocity = Vector3.zero;
 
@@ -1222,6 +1293,7 @@ public class PlayerMovementController : MonoBehaviour
 
         Vector3 start = transform.position;
 
+        //float duration = 0.25f;
         float duration = 0.25f;
         if (type == 1)
         {
@@ -1236,10 +1308,11 @@ public class PlayerMovementController : MonoBehaviour
 
         while (elapsed < duration)
         {
-            while (playerController.CurrentState == playerController.uiState)
-            {
-                yield return null;
-            }
+            //코루틴 탈출 조건
+            //while (playerController.CurrentState == playerController.uiState)
+            //{
+            //    yield return null;
+            //}
 
             float t = elapsed / duration;
 
@@ -1249,19 +1322,25 @@ public class PlayerMovementController : MonoBehaviour
 
             transform.position = horizontal + Vector3.up * arc;
 
-            elapsed += Time.deltaTime;
+            elapsed += Time.fixedDeltaTime;
+
+            yield return null;
         }
 
         transform.position = endPos;
 
         rb.isKinematic = false;
+        rb.useGravity = true;
 
-        playerController.SwitchState(playerController.idleState);
+        //playerController.SwitchState(playerController.idleState);
         EndLedgeGrap_Anim?.Invoke();
 
         ledgeClimbCoroutine = null;
-        Debug.Log("나여");
-
+        //Debug.Log("나여");
+        if(grounded)
+            fsm.ChangeState(new MoveState(fsm, m_player));
+        else
+            fsm.ChangeState(new FallState(fsm, m_player));
         yield break;
 
     }
@@ -1306,7 +1385,7 @@ public class PlayerMovementController : MonoBehaviour
         rb.useGravity = false;
 
 
-        float duration = 0.25f; // 0.5f // ��ü �̵� �ð�
+        float duration = 0.5f; // 0.5f // ��ü �̵� �ð�
 
 
         StartDash_Anim?.Invoke(dashInput);

@@ -40,7 +40,7 @@ public class PlayerAttackController : MonoBehaviour
     }
     public void UseAttack1()
     {
-        if (playerController.CurrentState != playerController.actionState && playerController.CurrentState != playerController.uiState && canCombo)
+        if (!(playerMovementController.m_fsm.currentState is PlayerMovementController.ClimbState) && canCombo)
         {
             playerAnimationController.PlayAnim_Attack1();
             //StartCoroutine(Attack1Coroutine());
