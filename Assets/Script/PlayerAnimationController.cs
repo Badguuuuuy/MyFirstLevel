@@ -115,12 +115,15 @@ public class PlayerAnimationController : MonoBehaviour
         playerMovementController.EndCrouch_Anim += EndAnim_Crouch;
         playerMovementController.StartWallRun_Anim += PlayAnim_WallRun;
         playerMovementController.EndWallRun_Anim += EndAnim_Wallrun;
-
+        playerMovementController.StartFall_Anim += PlayAnim_Fall;
+        playerMovementController.EndFall_Anim += EndAnim_Fall;
+        playerMovementController.StartJump_Anim += PlayAnim_Jump;
+        playerMovementController.EndJump_Anim += EndAnim_Jump;
         //playerController.Turn180 += PlayAnim_Turn180;
 
-        playerMovementController.StartJump_Anim += () => m_AnimationParams.JumpTriggered = true;
-        playerMovementController.StartFall_Anim += () => m_AnimationParams.FallTriggered = true;
-        playerMovementController.EndJump_Anim += () => m_AnimationParams.LandTriggered = true;
+        //playerMovementController.StartJump_Anim += () => m_AnimationParams.JumpTriggered = true;
+        //playerMovementController.StartFall_Anim += () => m_AnimationParams.FallTriggered = true;
+        //playerMovementController.EndJump_Anim += () => m_AnimationParams.LandTriggered = true;
 
         PlayerIdleAnim_Inter.OnUnequiping += UnEquip;
 
@@ -246,22 +249,22 @@ public class PlayerAnimationController : MonoBehaviour
         if (m_AnimationParams.JumpTriggered)
         {
             //animator.SetTrigger("Jump");
-            animator.SetTrigger("Jump");
+            //animator.SetTrigger("Jump");
         }
         if (m_AnimationParams.FallTriggered)
         {
-            animator.SetBool("Falling", true);
+            //animator.SetBool("Falling", true);
         }
         if (m_AnimationParams.LandTriggered)
         {
             //animator.SetTrigger("Land");
-            animator.SetBool("Falling", false);
-            animator.SetBool("Jumping", false);
+            //animator.SetBool("Falling", false);
+            //animator.SetBool("Jumping", false);
             //StartCoroutine("LandCoroutine");
         }
-        m_AnimationParams.JumpTriggered = false;
-        m_AnimationParams.FallTriggered = false;
-        m_AnimationParams.LandTriggered = false;
+        //m_AnimationParams.JumpTriggered = false;
+        //m_AnimationParams.FallTriggered = false;
+        //m_AnimationParams.LandTriggered = false;
 
         
 
@@ -397,6 +400,22 @@ public class PlayerAnimationController : MonoBehaviour
         playerMovementController.m_CanTurn180 = false;
         //animator.applyRootMotion = true;
         animator.SetTrigger("Turn180");
+    }
+    private void PlayAnim_Fall()
+    {
+        animator.SetBool("Falling", true);
+    }
+    private void EndAnim_Fall()
+    {
+        animator.SetBool("Falling", false);
+    }
+    private void PlayAnim_Jump()
+    {
+        animator.SetBool("Jumping", true);
+    }
+    private void EndAnim_Jump()
+    {
+        animator.SetBool("Jumping", false);
     }
     private void PlayAnim_LedgeClimb(int type) ///type = 0: 머리높이, 1: 가슴높이
     {

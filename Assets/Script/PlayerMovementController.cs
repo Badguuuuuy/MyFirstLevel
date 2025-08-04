@@ -66,7 +66,7 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if (!m_player.grounded && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
+            else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
             {
                 fsm.ChangeState(new FallState(fsm, m_player));
                 return;
@@ -153,7 +153,10 @@ public class PlayerMovementController : MonoBehaviour
 
         }
         public override void HandleInput() { }
-        public override void Exit() { /* 상태 종료 시 실행 */ }
+        public override void Exit() 
+        { /* 상태 종료 시 실행 */
+            m_player.EndJump_Anim?.Invoke();
+        }
     }
     // -----------------------
     // 예시 상태 (Fall)
@@ -175,9 +178,15 @@ public class PlayerMovementController : MonoBehaviour
         }
         public override void FixedUpdate()
         { /* 매 프레임 검사 */
+            bool coyoteTimeActive = Time.fixedTime - m_player.lastTimeGrounded <= m_player.coyoteTime;
             if (m_player.dodgePressed)
             {
                 fsm.ChangeState(new DashState(fsm, m_player));
+                return;
+            }
+            else if (m_player.jumpPressed && coyoteTimeActive)
+            {
+                fsm.ChangeState(new JumpState(fsm, m_player, 0));
                 return;
             }
             else if (m_player.jumpPressed)
@@ -220,6 +229,7 @@ public class PlayerMovementController : MonoBehaviour
                 m_player.jumpCnt = 0;
             }
             m_player.EndJump_Anim?.Invoke();
+            m_player.EndFall_Anim?.Invoke();
         }
     }
     // -----------------------
@@ -244,7 +254,7 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if (!m_player.grounded && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
+            else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
             {
                 fsm.ChangeState(new FallState(fsm, m_player));
                 return;
@@ -289,7 +299,7 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if (!m_player.grounded && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
+            else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
             {
                 fsm.ChangeState(new FallState(fsm, m_player));
                 return;
@@ -341,7 +351,7 @@ public class PlayerMovementController : MonoBehaviour
                 fsm.ChangeState(new DashState(fsm, m_player));
                 return;
             }
-            else if (!m_player.grounded && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
+            else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
             {
                 fsm.ChangeState(new FallState(fsm, m_player));
                 return;
@@ -551,6 +561,8 @@ public class PlayerMovementController : MonoBehaviour
     Vector3 m_LastInput;
     Vector3 m_LastRawInput;
     Vector3 rawInput;
+    float lastTimeGrounded;
+    float coyoteTime = 0.2f;
 
     float cameraYRotation;
     Quaternion inputFrame;
@@ -574,6 +586,7 @@ public class PlayerMovementController : MonoBehaviour
 
     public Action StartJump_Anim;
     public Action StartFall_Anim;
+    public Action EndFall_Anim;
     public Action EndJump_Anim;
     public Action Turn180;
     public Action OnTurn180AnimEnd;
@@ -707,7 +720,7 @@ public class PlayerMovementController : MonoBehaviour
     private void FixedUpdate()
     {
         //Debug.Log(speedXZ);
-        //Debug.Log(m_fsm.currentState);
+        Debug.Log(m_fsm.currentState);
         cameraYRotation = camPos.transform.eulerAngles.y;
         inputFrame = Quaternion.Euler(0, cameraYRotation, 0);
         cameraYdir = inputFrame * Vector3.forward;
@@ -746,6 +759,11 @@ public class PlayerMovementController : MonoBehaviour
         m_wasSliding = m_IsSliding;
         m_wasCrouching = m_IsCrouching;
         _lastCrouchValue = playerInput.Crouch.Value;
+
+        if (grounded)
+        {
+            lastTimeGrounded = Time.fixedTime;
+        }
         /*
         if (playerController.CurrentState != playerController.uiState)
         {
@@ -1148,7 +1166,7 @@ public class PlayerMovementController : MonoBehaviour
         }
         else if (jumpType == 1)
         {
-            rb.AddForce(m_player.wallNormal * 350f + UpDirection * 250f, ForceMode.Impulse);
+            rb.AddForce(m_player.wallNormal * 300f + UpDirection * 300f + m_player.playerModel.transform.forward * 200f, ForceMode.Impulse);
             //rb.useGravity = true;
             //m_isWallRunning = false;
             //playerController.SwitchState(playerController.moveState);
