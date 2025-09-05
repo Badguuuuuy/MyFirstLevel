@@ -8,6 +8,7 @@ public class PlayerAttackController : MonoBehaviour
 {
     public GameObject playerModel;
     PlayerController playerController;
+    PlayerInputController playerInputController;
 
     PlayerAnimationController playerAnimationController;
     PlayerMovementController playerMovementController;
@@ -28,6 +29,7 @@ public class PlayerAttackController : MonoBehaviour
         playerAnimationController = playerModel.GetComponent<PlayerAnimationController>();
         playerMovementController = GetComponent<PlayerMovementController>();
         playerController = GetComponent<PlayerController>();
+        playerInputController = GetComponent<PlayerInputController>();
 
         OnAttackComboMove.AddListener(() => StartCoroutine(Attack1MoveCoroutine()));
         OnAttackCombo.AddListener(() => StartCoroutine(Attack1Coroutine()));
@@ -36,7 +38,11 @@ public class PlayerAttackController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
+        if (playerInputController.Attack.Value >= 1f)
+        {
+            if(!(playerMovementController.m_fsm.currentState is PlayerMovementController.ClimbState) && canCombo)
+                playerAnimationController.PlayAnim_Attack1();
+        }
     }
     public void UseAttack1()
     {

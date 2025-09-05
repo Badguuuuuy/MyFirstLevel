@@ -21,6 +21,7 @@ public class MainCamController : MonoBehaviour
 
     private PlayerMovementController playerMovementController;
     private CinemachineThirdPersonFollow mainCamThirdPersonFollow;
+    [SerializeField] private PlayerEffectManager playerEffectManager;
 
     Vector3 targetPosition;
 
@@ -72,14 +73,16 @@ public class MainCamController : MonoBehaviour
 
         mainCamInstance = Instantiate(mainCamPrefab);
         uiCamInstance = Instantiate(uiCamPrefab);
+
+
         mainCamThirdPersonFollow = mainCamInstance.GetComponent<CinemachineThirdPersonFollow>();
 
         mainCamThirdPersonFollow.CameraSide = 1f;
 
         mainCamInstance.Target.TrackingTarget = camPos.transform;
-
-
         uiCamInstance.Target.TrackingTarget = camPos.transform;
+
+        playerEffectManager.Initialize(mainCamInstance, uiCamInstance);
     }
 
     // Update is called once per frame

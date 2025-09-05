@@ -37,7 +37,7 @@ public class VfxItemInfo
     public Vector3 rotation;            //type을 배열 순서와 잘 조정해보기
 }
 
-public class PlayerEffectController : MonoBehaviour
+public class PlayerAttackEffectController : MonoBehaviour
 {
     public GameObject playerModel;
     public Transform vfxPoint;
@@ -58,15 +58,15 @@ public class PlayerEffectController : MonoBehaviour
     {
         playerModelEventHandler = playerModel.GetComponent<PlayerModelEventHandler>();
         vfxPool = transform.GetComponent<VFXPool>();
-        playerModelEventHandler.returnTypeOfAnim += TriggerVFX;
+        //playerModelEventHandler.TriggerAttackVFX+= TriggerVFX;
         vfxObj = vfxDict.ToDictionary();
     }
 
-    private void TriggerVFX(int type)
+    public void TriggerVFX(int type)
     {
         switch (type)
         {
-            case 1:
+            case 0:
                 vfxObj.TryGetValue("Slash1", out ParticleSystem obj1);
                 obj1.transform.position = vfxPoint.transform.position + vfxPoint.transform.TransformDirection(vfxItemInfos[type].position);
                 obj1.transform.rotation = vfxPoint.transform.rotation * Quaternion.Euler(vfxItemInfos[type].rotation);
@@ -74,7 +74,7 @@ public class PlayerEffectController : MonoBehaviour
                 obj1.Play();
                 Debug.Log("vfx 1번타입 작동함");
                 break;
-            case 2:
+            case 1:
                 vfxObj.TryGetValue("Slash1", out ParticleSystem obj2);
                 obj2.transform.position = vfxPoint.transform.position + vfxPoint.transform.TransformDirection(vfxItemInfos[type].position);
                 obj2.transform.rotation = vfxPoint.transform.rotation * Quaternion.Euler(vfxItemInfos[type].rotation);

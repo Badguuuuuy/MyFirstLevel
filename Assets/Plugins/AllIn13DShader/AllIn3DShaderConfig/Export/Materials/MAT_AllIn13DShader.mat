@@ -12,7 +12,6 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _ALPHA_CUTOFF_ON
   - _CAST_SHADOWS_ON
   - _FOG_ON
   - _GREYSCALESTAGE_BEFORELIGHTING
@@ -44,7 +43,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -148,17 +147,17 @@ Material:
     - _AOContrast: 1
     - _AOMapEnabled: 0
     - _AOMapStrength: 1
-    - _AdvancedConfigurationEnabled: 0
+    - _AdvancedConfigurationEnabled: 1
     - _AffectedByLightmaps: 0
     - _AlbedoVertexColorMode: 1
     - _AlbedoVertexColorOn: 0
-    - _AlphaCutoffOn: 1
+    - _AlphaCutoffOn: 0
     - _AlphaCutoffValue: 0.25
     - _AlphaRoundOn: 0
     - _AnisoShininess: 0.85
     - _Anisotropy: 0.45
-    - _BlendDst: 0
-    - _BlendSrc: 1
+    - _BlendDst: 10
+    - _BlendSrc: 5
     - _BlendingMaskCutoffB: 0.1
     - _BlendingMaskCutoffG: 0.1
     - _BlendingMaskCutoffWhite: 0.15
@@ -279,7 +278,7 @@ Material:
     - _ReceiveShadowsOn: 1
     - _Reflections: 2
     - _ReflectionsAtten: 0.5
-    - _RenderPreset: 1
+    - _RenderPreset: 2
     - _RimAttenuation: 1
     - _RimLighting: 0
     - _RimLightingStage: 1

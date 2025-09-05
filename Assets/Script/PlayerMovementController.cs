@@ -63,7 +63,7 @@ public class PlayerMovementController : MonoBehaviour
         { /* 매 프레임 검사 */
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
@@ -116,7 +116,7 @@ public class PlayerMovementController : MonoBehaviour
         { /* 매 프레임 검사 */
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (m_player.jumpPressed)
@@ -150,7 +150,7 @@ public class PlayerMovementController : MonoBehaviour
 
             m_player.rb.linearVelocity = v;
             */
-
+            m_player.JumpControl(fsm, m_player);
         }
         public override void HandleInput() { }
         public override void Exit() 
@@ -181,7 +181,7 @@ public class PlayerMovementController : MonoBehaviour
             bool coyoteTimeActive = Time.fixedTime - m_player.lastTimeGrounded <= m_player.coyoteTime;
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (m_player.jumpPressed && coyoteTimeActive)
@@ -251,7 +251,7 @@ public class PlayerMovementController : MonoBehaviour
         { /* 매 프레임 검사 */
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
@@ -296,7 +296,7 @@ public class PlayerMovementController : MonoBehaviour
         { /* 매 프레임 검사 */
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
@@ -348,7 +348,7 @@ public class PlayerMovementController : MonoBehaviour
         { /* 매 프레임 검사 */
             if (m_player.dodgePressed)
             {
-                fsm.ChangeState(new DashState(fsm, m_player));
+                fsm.ChangeState(new DodgeState(fsm, m_player));
                 return;
             }
             else if (!m_player.grounded)// && Time.fixedTime - m_player.m_TimeLastGrounded > kDelayBeforeInferringJump)
@@ -373,25 +373,6 @@ public class PlayerMovementController : MonoBehaviour
         { /* 상태 종료 시 실행 */
             m_player.EndSlide_Anim?.Invoke();
         }
-    }
-    // -----------------------
-    // 예시 상태 (Dash)
-    // -----------------------
-    public class DashState : State
-    {
-
-        public DashState(StateMachine fsm, PlayerMovementController m_player) : base(fsm, m_player)
-        {
-
-        }
-
-        public override void Enter() { /* 상태 진입 시 실행 */ }
-        public override void FixedUpdate()
-        { /* 매 프레임 검사 */
-
-        }
-        public override void HandleInput() { }
-        public override void Exit() { /* 상태 종료 시 실행 */ }
     }
     // -----------------------
     // 예시 상태 (Climb)
@@ -443,7 +424,7 @@ public class PlayerMovementController : MonoBehaviour
                 //playerController.SwitchState(playerController.moveState);
                 if (m_player.dodgePressed)
                 {
-                    fsm.ChangeState(new DashState(fsm, m_player));
+                    fsm.ChangeState(new DodgeState(fsm, m_player));
                     return;
                 }
                 else if (m_player.jumpPressed)// && m_player.jumpCnt < m_player.maxJumpCnt)
@@ -452,10 +433,11 @@ public class PlayerMovementController : MonoBehaviour
                     Debug.Log("야호호");
                     return;
                 }
-                else if (!m_player.wallDetected || !(m_player.playerInput.MoveZ.Value >= 1f) || Vector3.Dot(m_player.wallForwardDir, m_player.m_LastInput) < 0f || m_player.speedXZ <= 1f)
+                else if (!m_player.wallDetected || !(m_player.playerInput.MoveZ.Value >= 1f) || Vector3.Dot(m_player.wallForwardDir, m_player.m_LastInput) < 0f || m_player.speedXZ <= 1f)// || Vector3.Dot(m_player.wallForwardDir, new Vector3(m_player.rb.linearVelocity.x, 0f, m_player.rb.linearVelocity.z).normalized) < 0f)// || m_player.speedXZ <= 1f)
                 {
                     if (!m_player.grounded)
                     {
+                    Debug.Log(Vector3.Dot(m_player.wallForwardDir, m_player.m_LastInput));
                         fsm.ChangeState(new FallState(fsm, m_player));
                         return;
                     }
@@ -476,6 +458,69 @@ public class PlayerMovementController : MonoBehaviour
         }
     }
     // -----------------------
+    // 예시 상태 (Dodge)
+    // -----------------------
+    public class DodgeState : State
+    {
+        Vector3 dodgeLastInput;
+        float elapsed = 0f;
+        float a = 0f;
+
+        public DodgeState(StateMachine fsm, PlayerMovementController m_player) : base(fsm, m_player)
+        {
+            dodgeLastInput = m_player.m_LastInput;
+        }
+
+        public override void Enter() 
+        { /* 상태 진입 시 실행 */ 
+            m_player.StartDash_Anim?.Invoke(dodgeLastInput);
+            m_player.rb.linearVelocity = Vector3.zero;
+            //m_player.rb.AddForce(dodgeLastInput * m_player.dodgeSpeed, ForceMode.Impulse);
+            elapsed = 0f;
+            m_player.rb.useGravity = false;
+            //m_player.meshTrail.EnableTrail();
+            m_player.playerEffectManager.TriggerDodgeVFX(0.1f, 0.01f);
+        }
+        public override void FixedUpdate()
+        { /* 매 프레임 검사 */
+
+            elapsed += Time.fixedDeltaTime;
+            a += Time.fixedDeltaTime;
+            Vector3 slopeDirection = Vector3.ProjectOnPlane(dodgeLastInput, m_player. GroundHitNormal).normalized;
+            m_player.rb.linearVelocity = slopeDirection * m_player.dodgeSpeed;
+            //while (a >= 0.01f)
+            //{
+            //    a -= 0.01f;
+            //    m_player.playerEffectManager.TriggerTrail();
+            //}
+            if (elapsed >= 0.1f)
+            {
+                
+                if (m_player.grounded)
+                {
+                    fsm.ChangeState(new MoveState(fsm, m_player));
+                    //m_player.meshTrail.DisableTrail();
+                }
+                else if (m_player.wallDetected && m_player.playerInput.MoveZ.Value >= 1f && m_player.speedXZ > 1f)
+                    fsm.ChangeState(new WallRunState(fsm, m_player));
+                else
+                    fsm.ChangeState(new FallState(fsm, m_player));
+            }
+        }
+        public override void HandleInput() { }
+        public override void Exit() 
+        { /* 상태 종료 시 실행 */
+            m_player.rb.useGravity = true;
+            Vector3 v = m_player.rb.linearVelocity;
+            float dodgeEndDamping = 0.3f; // 0~1 사이, 0에 가까울수록 더 많이 감쇠
+            v.x *= dodgeEndDamping;
+            v.z *= dodgeEndDamping;
+            m_player.rb.linearVelocity = new Vector3(v.x, v.y, v.z);
+            //m_player.meshTrail.DisableTrail();
+            //m_player.rb.linearVelocity = Vector3.zero;
+        }
+    }
+    // -----------------------
     // PlayerFSM 본체
     // -----------------------
     public StateMachine m_fsm { get; private set; }
@@ -485,6 +530,7 @@ public class PlayerMovementController : MonoBehaviour
     private CharacterController characterController;
     private PlayerController playerController;
     private CooldownManager cooldownManager;
+    private PlayerEffectManager playerEffectManager;
     [HideInInspector]public Rigidbody rb { get; private set; }
 
     [Header("Reference")]
@@ -502,7 +548,7 @@ public class PlayerMovementController : MonoBehaviour
     public float groundDrag = 5f;
     public float airDrag = 0f;
     public float slideDrag = 0.1f;
-    public float dashDrag = 0.1f;
+    public float dodgeDrag = 0.1f;
     public float slopeXspeed = 15f;
     public float wallRunSpeed = 2f;
 
@@ -526,7 +572,7 @@ public class PlayerMovementController : MonoBehaviour
     float _slideStartTime = -1f;
     float _slideMinDuration = 0.25f; // �ּ� 0.15�ʴ� �����̵� ����
     Vector3 slideStartDir;
-    float slideSpeed = 25f;
+    public float slideSpeed = 25f;
 
     private float slideFriction = 10f;
 
@@ -546,10 +592,11 @@ public class PlayerMovementController : MonoBehaviour
     public bool wallDetected { get; private set; }
     public bool isWallRight { get; private set; }
 
-    [Header("Dash")]
+    [Header("Dodge")]
     private float _lastDodgeValue;
-    private Vector3 dashInput;
-    public float dashCooldown = 1.5f;
+    private Vector3 dodgeInput;
+    public float dodgeCooldown = 1.5f;
+    public float dodgeSpeed = 20f;
     bool dodgePressed;
 
     public bool m_isDashing { get; private set; }
@@ -667,17 +714,18 @@ public class PlayerMovementController : MonoBehaviour
         m_CanMove = true;
         m_TimeLastGrounded = Time.time;
 
-        modelTransform = playerModel.transform;
         //groundChecker = groundCheckObj.GetComponent<GroundChecker>();
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        modelTransform = playerModel.transform;
         rb = GetComponent<Rigidbody>();
         playerController = GetComponent<PlayerController>();
         playerInput = GetComponent<PlayerInputController>();
         cooldownManager = GetComponent<CooldownManager>();
+        playerEffectManager = playerModel.GetComponent<PlayerEffectManager>();
         //characterController = GetComponent<CharacterController>();
         //slopeLimit = characterController.slopeLimit;
         //animator = playerModel.GetComponent<Animator>();
@@ -720,7 +768,7 @@ public class PlayerMovementController : MonoBehaviour
     private void FixedUpdate()
     {
         //Debug.Log(speedXZ);
-        Debug.Log(m_fsm.currentState);
+        //Debug.Log(m_fsm.currentState);
         cameraYRotation = camPos.transform.eulerAngles.y;
         inputFrame = Quaternion.Euler(0, cameraYRotation, 0);
         cameraYdir = inputFrame * Vector3.forward;
@@ -852,8 +900,8 @@ public class PlayerMovementController : MonoBehaviour
             case SlideState accelSlideState:
                 rb.linearDamping = slideDrag;
                 break;
-            case DashState accelSlideState:
-                rb.linearDamping = dashDrag;
+            case DodgeState dodgeState:
+                rb.linearDamping = dodgeDrag;
                 break;
             case WallRunState wallRunState:
                 rb.linearDamping = groundDrag;
@@ -894,7 +942,7 @@ public class PlayerMovementController : MonoBehaviour
 
         if (grounded)
         {
-            Vector3 slopeDirection = Vector3.ProjectOnPlane(inputVelocity, GroundHitNormal).normalized * inputVelocity.magnitude;
+            Vector3 slopeDirection = Vector3.ProjectOnPlane(inputVelocity, GroundHitNormal).normalized;
 
             //Debug.Log();
 
@@ -904,8 +952,8 @@ public class PlayerMovementController : MonoBehaviour
 
             Vector3 targetVelocity;
 
-            targetVelocity = slopeDirection;// * slopeBoost;
-            rb.AddForce(targetVelocity, ForceMode.Acceleration);
+            targetVelocity = slopeDirection * inputVelocity.magnitude; ;// * slopeBoost;
+            rb.AddForce(targetVelocity, ForceMode.Force);
             /*
             if (m_IsAccelSliding)
             {
@@ -996,7 +1044,7 @@ public class PlayerMovementController : MonoBehaviour
 
 
             targetVelocity = slopeDirection * crouchDamping;
-            rb.AddForce(targetVelocity, ForceMode.Acceleration);
+            rb.AddForce(targetVelocity, ForceMode.Force);
             
         }
     }
@@ -1153,9 +1201,9 @@ public class PlayerMovementController : MonoBehaviour
         {
             float jumpVelocity = Mathf.Sqrt(2 * JumpSpeed * Mathf.Abs(Physics.gravity.y));
 
-            Vector3 v = rb.linearVelocity;
-            v.y = jumpVelocity;
-            rb.linearVelocity = v;
+            Vector3 v0 = rb.linearVelocity;
+            v0.y = jumpVelocity;
+            rb.linearVelocity = v0;
             //lastJumpTime = now;
             //if (grounded)
             //{
@@ -1166,7 +1214,7 @@ public class PlayerMovementController : MonoBehaviour
         }
         else if (jumpType == 1)
         {
-            rb.AddForce(m_player.wallNormal * 300f + UpDirection * 300f + m_player.playerModel.transform.forward * 200f, ForceMode.Impulse);
+            rb.AddForce(m_player.wallNormal * 30f + UpDirection * 12f + m_player.playerModel.transform.forward * 10f, ForceMode.Impulse);
             //rb.useGravity = true;
             //m_isWallRunning = false;
             //playerController.SwitchState(playerController.moveState);
@@ -1177,20 +1225,21 @@ public class PlayerMovementController : MonoBehaviour
             jumpCnt++;
             wasJumped = true;
         }
+
         //}
 
         // If we are falling, assume the jump pose
         //if (!grounded && now - m_TimeLastGrounded > kDelayBeforeInferringJump && jumpCnt < maxJumpCnt)
         //{
-            //m_IsJumping = true;
-            //if (!wasJumped)
-            //    jumpCnt++;
+        //m_IsJumping = true;
+        //if (!wasJumped)
+        //    jumpCnt++;
 
         //}
         //if (m_IsJumping && !m_LastIsJumping)
         //{
-            //StartFall?.Invoke();
-            //grounded = false;
+        //StartFall?.Invoke();
+        //grounded = false;
         //}
 
         /*
@@ -1219,11 +1268,74 @@ public class PlayerMovementController : MonoBehaviour
         }*/
         //return justLanded;
     }
+    void JumpControl(StateMachine fsm, PlayerMovementController m_player)
+    {
+        Vector3 inputVelocity = m_LastInput * speed;
+
+        // slope �¿� �̵�
+
+
+        //Vector3 slopeDirection = Vector3.ProjectOnPlane(inputVelocity, GroundHitNormal).normalized;
+
+        //Debug.Log();
+
+        //float alignment = Vector3.Dot(slopeDirection.normalized, slopeDir);
+        //float t = (alignment + 1f) * 0.5f;
+        //float slopeBoost = Mathf.Lerp(slopeMinBoost, slopeMaxBoost, t);
+
+        //Vector3 targetVelocity;
+
+        //targetVelocity = slopeDirection * inputVelocity.magnitude; ;// * slopeBoost;
+        rb.AddForce(inputVelocity, ForceMode.Force);
+
+        Vector3 v = rb.linearVelocity;
+
+        // x, z 성분만 감쇠 적용
+        v.x *= (1f - 5f * Time.fixedDeltaTime);
+        v.z *= (1f - 5f * Time.fixedDeltaTime);
+
+        // 너무 작은 값이면 0으로 처리 (멈춤)
+        if (Mathf.Abs(v.x) < 0.0001f) v.x = 0f;
+        if (Mathf.Abs(v.z) < 0.0001f) v.z = 0f;
+
+        rb.linearVelocity = v;
+    }
     void Fall(StateMachine fsm, PlayerMovementController m_player)
     {
         //m_IsJumping = true;
         //공중 이동동작 넣기
         //Vector3 inputDir = new Vector3(inputX, 0, inputZ).normalized;
+        Vector3 inputVelocity = m_LastInput * speed;
+
+        // slope �¿� �̵�
+
+        
+            //Vector3 slopeDirection = Vector3.ProjectOnPlane(inputVelocity, GroundHitNormal).normalized;
+
+            //Debug.Log();
+
+            //float alignment = Vector3.Dot(slopeDirection.normalized, slopeDir);
+            //float t = (alignment + 1f) * 0.5f;
+            //float slopeBoost = Mathf.Lerp(slopeMinBoost, slopeMaxBoost, t);
+
+            //Vector3 targetVelocity;
+
+            //targetVelocity = slopeDirection * inputVelocity.magnitude; ;// * slopeBoost;
+            rb.AddForce(inputVelocity, ForceMode.Force);
+
+        Vector3 v = rb.linearVelocity;
+
+        // x, z 성분만 감쇠 적용
+        v.x *= (1f - 5f * Time.fixedDeltaTime);
+        v.z *= (1f - 5f * Time.fixedDeltaTime);
+
+        // 너무 작은 값이면 0으로 처리 (멈춤)
+        if (Mathf.Abs(v.x) < 0.0001f) v.x = 0f;
+        if (Mathf.Abs(v.z) < 0.0001f) v.z = 0f;
+
+        rb.linearVelocity = v;
+
+        /*
 
         // 현재 XZ 속도
         //Vector3 velXZ = new Vector3(rb.velocity.x, 0, rb.velocity.z);
@@ -1267,7 +1379,7 @@ public class PlayerMovementController : MonoBehaviour
                 //{
                     RaycastHit hit;
 
-                    Vector3 origin = transform.position + Vector3.up * 1f;
+                    Vector3 origin = transform.position + Vector3.up * 0.5f;
 
 
                     Vector3 forward = new Vector3(modelTransform.forward.x, transform.forward.y, modelTransform.forward.z);
@@ -1276,7 +1388,7 @@ public class PlayerMovementController : MonoBehaviour
                     {
                         Vector3 ledgeCheck;
 
-                        for (float iter = 0.1f; iter <= 2f; iter += 0.1f)
+                        for (float iter = 0.1f; iter <= 2.5f; iter += 0.1f)
                         {
                             ledgeCheck = hit.point + Vector3.up * iter - forward * 0.05f;
                             if (!Physics.Raycast(ledgeCheck, forward, 1f, pakourLayerMask))
@@ -1372,7 +1484,7 @@ public class PlayerMovementController : MonoBehaviour
         jumpCooldownCoroutine = null; 
     }
 
-
+    /*
     private void Dash()
     {
         if ((playerController.CurrentState == playerController.moveState || playerController.CurrentState == playerController.idleState || playerController.CurrentState == playerController.wallRunState) && playerController.CurrentState != playerController.actionState)
@@ -1439,7 +1551,8 @@ public class PlayerMovementController : MonoBehaviour
 
         cooldownManager.StartCooldown("Dash", dashCooldown);
     }
-
+    */
+    /*
     private void WallRunCheck()
     {
         wallRight = Physics.Raycast(transform.position + transform.up * 1f, modelTransform.right, out rightWallHit, wallCheckDistance, GroundLayers, QueryTriggerInteraction.Ignore);
@@ -1451,6 +1564,7 @@ public class PlayerMovementController : MonoBehaviour
         wallDetected = wallRight || wallLeft;
 
         wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+
         wallForward = Vector3.Cross(wallNormal, transform.up);
 
         if ((camPos.forward - wallForward).magnitude > (camPos.forward - -wallForward).magnitude)
@@ -1458,7 +1572,57 @@ public class PlayerMovementController : MonoBehaviour
 
         wallForwardDir = wallForward;
     }
+    */
+    private void WallRunCheck()
+    {
+        // 기존 좌우 레이캐스트
+        wallRight = Physics.Raycast(transform.position + transform.up * 1f, modelTransform.right, out rightWallHit, wallCheckDistance, GroundLayers, QueryTriggerInteraction.Ignore);
+        wallLeft = Physics.Raycast(transform.position + transform.up * 1f, -modelTransform.right, out leftWallHit, wallCheckDistance, GroundLayers, QueryTriggerInteraction.Ignore);
 
+        // 추가: 대각선 레이캐스트
+        RaycastHit forRightHit, forLeftHit;
+        Vector3 forRightDir = (modelTransform.right + modelTransform.forward).normalized;
+        Vector3 forLeftDir = (-modelTransform.right + modelTransform.forward).normalized;
+
+        bool forRight = Physics.Raycast(transform.position + transform.up * 1f, forRightDir, out forRightHit, wallCheckDistance, GroundLayers, QueryTriggerInteraction.Ignore);
+        bool forLeft = Physics.Raycast(transform.position + transform.up * 1f, forLeftDir, out forLeftHit, wallCheckDistance, GroundLayers, QueryTriggerInteraction.Ignore);
+
+        // wallRight/wallLeft에 대각선 결과도 반영
+        wallRight = wallRight || forRight;
+        wallLeft = wallLeft || forLeft;
+
+        // wallDetected 판정
+        wallDetected = wallRight || wallLeft;
+
+        // 벽 normal/forward 계산 (우선순위: 오른쪽→왼쪽→대각오른→대각왼)
+        if (wallRight)
+        {
+            if (forRight)
+                wallNormal = forRightHit.normal;
+            else
+                wallNormal = rightWallHit.normal;
+        }
+        else if (wallLeft)
+        {
+            if (forLeft)
+                wallNormal = forLeftHit.normal;
+            else
+                wallNormal = leftWallHit.normal;
+        }
+
+        wallForward = Vector3.Cross(wallNormal, transform.up);
+
+        if ((camPos.forward - wallForward).magnitude > (camPos.forward - -wallForward).magnitude)
+            wallForward = -wallForward;
+
+        wallForwardDir = wallForward;
+
+        // isWallRight 판정
+        if (wallDetected)
+        {
+            isWallRight = wallRight ? true : false;
+        }
+    }
     private void WallRun(StateMachine fsm, PlayerMovementController m_player)
     {
         //if (wallRunCooldownTimer > 0f)
@@ -1527,8 +1691,8 @@ public class PlayerMovementController : MonoBehaviour
             //{
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
 
-                rb.AddForce(wallForward * wallRunSpeed, ForceMode.Acceleration);
-                rb.AddForce(-wallNormal * 5f, ForceMode.Acceleration);
+                rb.AddForce(wallForward * wallRunSpeed, ForceMode.Force);
+                rb.AddForce(-wallNormal * 5f, ForceMode.Force);
             //}
 
             //Debug.Log("m_isWallRunning: " + m_isWallRunning);

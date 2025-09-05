@@ -123,7 +123,7 @@ public class PlayerInputController : MonoBehaviour, Unity.Cinemachine.IInputAxis
         //EquipUnequip();
     }
 
-    
+    /*
     public void ActionAttack(InputAction.CallbackContext context)
     {
         if (playerController.CurrentState != playerController.uiState)
@@ -134,6 +134,7 @@ public class PlayerInputController : MonoBehaviour, Unity.Cinemachine.IInputAxis
             }
         }
     }
+    */
     public void UIOpenMenu(InputAction.CallbackContext context)
     {
         /*
